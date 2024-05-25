@@ -1,4 +1,5 @@
 use bevy::{prelude::*, render::camera::ScalingMode};
+use bevy_asset_loader::prelude::*;
 use bevy_ggrs::{prelude::*, *};
 use bevy_matchbox::prelude::*;
 use components::*;
@@ -19,13 +20,27 @@ type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 const MAP_SIZE: u32 = 41;
 const GRID_WIDTH: f32 = 0.05;
 
-#[derive(Component)]
-struct Player {
-    handle: usize
+#[derive(AssetCollection, Resource)]
+struct ImageAssets {
+    #[asset(path = "bullet.png")]
+    bullet: Handle<Image>,
+}
+
+#[derive(States, Clone, Eq, PartialEq, Debug, Hash, Default)]
+enum GameState {
+    #[default]
+    AssetLoading,
+    InGame,
 }
 
 fn main() {
     App::new()
+        .init_state::<GameState>()
+        .add_loading_state(
+            LoadingState::new(GameState::AssetLoading)
+                .load_collection::<ImageAssets>()
+                .continue_to_state(GameState::InGame),
+        )
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
