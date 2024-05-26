@@ -70,9 +70,34 @@ fn main() {
                 camera_follow.run_if(in_state(GameState::InGame)),
             ),
         )
-        .add_systems(ReadInputs, read_local_inputs) 
-        .add_systems(GgrsSchedule, move_players) 
+        .add_systems(ReadInputs, read_local_inputs)         
+        .add_systems(
+            GgrsSchedule,
+            (move_players, fire_bullets.after(move_players)),
+        )
         .run();
+}
+
+fn fire_bullets(
+    mut commands: Commands,
+    inputs: Res<PlayerInputs<Config>>,
+    images: Res<ImageAssets>,
+    players: Query<(&Transform, &Player)>,
+) {
+    for (transform, player) in &players {
+        let (input, _) = inputs[player.handle];
+        if fire(input) {
+            commands.spawn(SpriteBundle {
+                transform: Transform::from_translation(transform.translation),
+                texture: images.bullet.clone(),
+                sprite: Sprite {
+                    custom_size: Some(Vec2::new(0.3, 0.1)),
+                    ..default()
+                },
+                ..default()
+            });
+        }
+    }
 }
 
 fn setup(mut commands: Commands) {
@@ -178,7 +203,8 @@ fn start_matchbox_socket(mut commands: Commands) {
 fn wait_for_players(
     mut commands: Commands,
     mut socket: ResMut<MatchboxSocket<SingleChannel>>,
-    mut next_state: ResMut<NextState<GameState>>,) {
+    mut next_state: ResMut<NextState<GameState>>,
+) {
     if socket.get_channel(0).is_err() {
         return; // we've already started
     }
